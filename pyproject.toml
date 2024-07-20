@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "cronformer"
+version = "0.1.0"
+description = "Transform natural text to cron schedules"
+authors = ["Shukant Pal <foss@shukantpal.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+transformers = "^4.42.4"
+torch = { version = "2.2.2" }
+tokenizers = "^0.19.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
