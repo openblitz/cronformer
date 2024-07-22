@@ -1,1 +1,6 @@
 .huggingface
+cronformer.jsonl
+data/
+logs/
+model-*/
+wandb/

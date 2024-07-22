@@ -73,11 +73,11 @@ class CronformerModel(PreTrainedModel):
         self.encoder = BertModel(config)
         self.decoder = CronDecoder(config)
 
-    def forward(self, input_ids, output_ids, cron_dims=None):
+    def forward(self, input_ids, output_ids, cron_dims=None, attention_mask=None):
         if cron_dims is None:
             cron_dims = list(range(CRON_DIMS))
 
-        encoder_outputs = self.encoder(input_ids).last_hidden_state
+        encoder_outputs = self.encoder(input_ids, attention_mask).last_hidden_state
         logits = torch.stack(
             [self.decoder(output_ids[i], encoder_outputs, i) for i in cron_dims],
             dim=0,
