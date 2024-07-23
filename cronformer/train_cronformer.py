@@ -42,9 +42,17 @@ class CronExpressionDataset(Dataset):
         return input_ids, attention_mask, output_ids
 
 
+def eval_accuracy(logits, labels):
+    labels_view = labels[labels != -100]
+    predictions_view = torch.argmax(logits, dim=-1)[labels != -100]
+
+    return torch.sum(labels_view == predictions_view).item() / labels_view.numel()
+
+
 def eval_batch(model: CronformerModel, valid_loader: DataLoader, device: torch.device, num_steps: int, pad_token_id: int, output_dir: str, disable_wandb: bool):
     model.eval()
     valid_loss = 0
+    valid_accuracy = 0
 
     with torch.no_grad():
         for input_ids, attention_mask, output_ids in tqdm(valid_loader, leave=False):
@@ -60,9 +68,13 @@ def eval_batch(model: CronformerModel, valid_loader: DataLoader, device: torch.d
             loss = torch.nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), output_ids.view(-1))
             valid_loss += loss.item() / len(valid_loader)
 
+            valid_accuracy += eval_accuracy(logits, output_ids) / len(valid_loader)
+
     if not disable_wandb:
         wandb.log({"valid/loss": valid_loss}, step=num_steps)
+        wandb.log({"valid/accuracy": valid_accuracy}, step=num_steps)
     print(f"Validation Loss {valid_loss}")
+    print(f"Validation Accuracy {valid_accuracy}")
 
     model.save_pretrained(path.join(output_dir, f"num_steps-{num_steps}"))
 
@@ -143,17 +155,18 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
 
     for epoch in tqdm(range(args.epochs)):
-        if not args.disable_wandb:
-            wandb.log({"epoch": epoch}, step=num_steps)
-
         for input_ids, attention_mask, output_ids in tqdm(train_loader, leave=False):
-            if num_steps % args.validation_stride == 0 and num_steps > 0:
+            if not args.disable_wandb:
+                wandb.log({"epoch": epoch}, step=num_steps)
+                wandb.log({"learning_rate": optimizer.param_groups[0]["lr"]}, step=num_steps)
+            if num_steps % args.validation_stride == 0:
                 eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb)
 
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
             output_ids = output_ids.to(device).permute(1, 0, 2).contiguous()  # [cron_dim, batch_size, sequence_length]
             batch_loss = 0
+            batch_accuracy = 0
 
             optimizer.zero_grad()
 
@@ -172,13 +185,16 @@ if __name__ == "__main__":
                 loss.backward()
 
                 batch_loss += loss.item()
+                batch_accuracy += eval_accuracy(logits, labels)
             batch_loss /= num_actual_grad_accumulation_steps
+            batch_accuracy /= num_actual_grad_accumulation_steps
 
             optimizer.step()
 
             if not args.disable_wandb:
                 wandb.log({"train/loss": batch_loss}, step=num_steps)
-            print(f"Epoch {epoch}, Step {num_steps}, Loss {batch_loss}")
+                wandb.log({"train/accuracy": batch_accuracy}, step=num_steps)
+            print(f"Epoch {epoch}, Step {num_steps}, Loss {batch_loss}, Accuracy {batch_accuracy}")
 
             num_steps += 1
 
@@ -186,5 +202,6 @@ if __name__ == "__main__":
                 print("WARNING: Maximum number of steps reached")
                 break
 
+    eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb)
     model.save_pretrained(path.join(output_dir, "final"))
 

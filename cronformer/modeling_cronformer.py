@@ -52,7 +52,7 @@ class CronDecoder(nn.Module):
     def __init__(self, config: BertConfig):
         super(CronDecoder, self).__init__()
 
-        num_decoder_layers = 2
+        num_decoder_layers = 4
 
         self.config = config
         self.token_embedding = nn.Embedding(output_vocab_size, config.hidden_size)
@@ -102,11 +102,11 @@ class CronformerModel(PreTrainedModel):
         return logits
 
     @classmethod
-    def from_bert(cls, config: Optional[BertConfig] = None):
+    def from_bert(cls, config: Optional[BertConfig] = None, torch_dtype: Optional[torch.dtype] = None):
         if config is None:
             config = BertConfig.from_pretrained('bert-base-uncased')
 
         cronformer = cls(config)
-        cronformer.encoder = BertModel.from_pretrained('bert-base-uncased', config=config)
+        cronformer.encoder = BertModel.from_pretrained('bert-base-uncased', config=config, torch_dtype=torch_dtype)
 
         return cronformer
