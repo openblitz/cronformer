@@ -29,12 +29,13 @@ class DecoderLayer(nn.Module):
 
     def forward(self, hidden_states, encoder_outputs, attention_mask):
         hidden_states = self.layer_norm1(hidden_states)
-        self_attn_output, _ = self.self_attn(hidden_states, hidden_states, hidden_states, attn_mask=attention_mask)
+        self_attn_causal_mask = torch.triu(torch.ones(hidden_states.size(1), hidden_states.size(1)), diagonal=1).to(hidden_states.device).bool()
+        self_attn_output, _ = self.self_attn(hidden_states, hidden_states, hidden_states, attn_mask=self_attn_causal_mask, is_causal=True)
         hidden_states = hidden_states + self.dropout(self_attn_output)
 
         hidden_states = self.layer_norm2(hidden_states)
 
-        cross_attn_output, _ = self.cross_attn(hidden_states, encoder_outputs, encoder_outputs)
+        cross_attn_output, _ = self.cross_attn(hidden_states, encoder_outputs, encoder_outputs, attn_mask=attention_mask)
         hidden_states = hidden_states + self.dropout(cross_attn_output)
 
         hidden_states = self.layer_norm3(hidden_states)
@@ -51,17 +52,32 @@ class CronDecoder(nn.Module):
     def __init__(self, config: BertConfig):
         super(CronDecoder, self).__init__()
 
+        num_decoder_layers = 2
+
+        self.config = config
         self.token_embedding = nn.Embedding(output_vocab_size, config.hidden_size)
-        self.decoder_layer = DecoderLayer(config)
+        self.decoder_layers = nn.ModuleList([
+            DecoderLayer(config)
+            for _ in range(num_decoder_layers)
+        ])
         self.cron_heads = nn.ModuleList([
             nn.Linear(config.hidden_size, output_vocab_size)
             for _ in range(CRON_DIMS)
         ])
 
-    def forward(self, output_ids, encoder_outputs, cron_dim):
+    def forward(self, output_ids, encoder_outputs, cron_dim, attention_mask):
         embeddings = self.token_embedding(output_ids)
-        attention_mask = torch.triu(torch.ones(output_ids.size(1), output_ids.size(1)), diagonal=1).to(output_ids.device)
-        hidden_states = self.decoder_layer(embeddings, encoder_outputs, attention_mask=attention_mask)
+
+        if attention_mask is not None and len(attention_mask.shape) == 2:
+            attention_mask = (attention_mask.unsqueeze(1)
+                              .repeat_interleave(self.config.num_attention_heads, dim=0)
+                              .repeat_interleave(output_ids.size(1), dim=1)
+                              .bool())
+
+        hidden_states = embeddings
+        for decoder_layer in self.decoder_layers:
+            hidden_states = decoder_layer(hidden_states, encoder_outputs, attention_mask=attention_mask)
+
         return self.cron_heads[cron_dim](hidden_states)
 
 
@@ -79,7 +95,7 @@ class CronformerModel(PreTrainedModel):
 
         encoder_outputs = self.encoder(input_ids, attention_mask).last_hidden_state
         logits = torch.stack(
-            [self.decoder(output_ids[i], encoder_outputs, i) for i in cron_dims],
+            [self.decoder(output_ids[i], encoder_outputs, i, attention_mask) for i in cron_dims],
             dim=0,
         )
 

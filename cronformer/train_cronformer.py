@@ -37,7 +37,7 @@ class CronExpressionDataset(Dataset):
         input_text, output_cron = self.data[idx]
         tokenized = self.input_tokenizer(input_text, max_length=self.input_sequence_length, padding="max_length", return_tensors="pt")
         input_ids = tokenized["input_ids"].squeeze(0)
-        attention_mask = tokenized["attention_mask"].squeeze(0)
+        attention_mask = tokenized["attention_mask"].squeeze(0).bool()
         output_ids = torch.tensor(self.output_tokenizer.tokenize(output_cron, sequence_length=self.sequence_length))
         return input_ids, attention_mask, output_ids
 
@@ -82,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-dir", type=str, default="./.cronformer", help="Output directory for the model")
     parser.add_argument("--input-sequence-length", type=int, default=512, help="Maximum sequence length for the input")
     parser.add_argument("-s", "--sequence-length", type=int, default=128, help="Maximum sequence length for the model")
+    parser.add_argument("--max-steps", type=int, default=0, help="Maximum number of steps to train")
     parser.add_argument("--validation-split", type=float, default=0.1, help="Fraction of the dataset to use for validation")
     parser.add_argument("--validation-stride", type=int, default=1000, help="Number of steps between validation runs")
     parser.add_argument("--disable-wandb", action="store_true", help="Disable logging to wandb")
@@ -180,6 +181,10 @@ if __name__ == "__main__":
             print(f"Epoch {epoch}, Step {num_steps}, Loss {batch_loss}")
 
             num_steps += 1
+
+            if args.max_steps > 0 and num_steps >= args.max_steps:
+                print("WARNING: Maximum number of steps reached")
+                break
 
     model.save_pretrained(path.join(output_dir, "final"))
 
