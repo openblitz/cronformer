@@ -98,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--validation-split", type=float, default=0.1, help="Fraction of the dataset to use for validation")
     parser.add_argument("--validation-stride", type=int, default=1000, help="Number of steps between validation runs")
     parser.add_argument("--disable-wandb", action="store_true", help="Disable logging to wandb")
+    parser.add_argument("--from-checkpoint", type=str, default=None, help="Path to the checkpoint to start from")
     args = parser.parse_args()
 
     if not args.disable_wandb:
@@ -135,7 +136,11 @@ if __name__ == "__main__":
     ])
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=args.micro_batch_size, shuffle=False)
-    model = CronformerModel.from_bert().to(device)
+
+    if not args.from_checkpoint:
+        model = CronformerModel.from_bert().to(device)
+    else:
+        model = CronformerModel.from_pretrained(args.from_checkpoint).to(device)
 
     for param in model.parameters():
         param.requires_grad = False
