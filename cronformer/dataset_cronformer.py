@@ -27,7 +27,7 @@ def cron_component_sampler(start: int, end: int, weights: Optional[list] = None)
         step_start = random.choices([
             start,
             random.randint(start + 1, end - 2)
-        ], weights=[0.67, 0.33])
+        ], weights=[0.67, 0.33])[0]
         step_size = random.randint(1, end - step_start - 1)
         return f"{step_start}/{step_size}"
 
