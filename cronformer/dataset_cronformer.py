@@ -32,7 +32,7 @@ def cron_component_sampler(start: int, end: int, weights: Optional[list] = None)
         return f"{step_start}/{step_size}"
 
     def random_list():
-        return ",".join([str(x) for x in random.choices(range(start, end + 1), k=random.randint(1, 3))])
+        return ",".join([str(x) for x in sorted(random.choices(range(start, end + 1), k=random.randint(1, 3)))])
 
     def _sampler():
         return random.choices([star, random_singleton, random_range, random_step, random_list],
