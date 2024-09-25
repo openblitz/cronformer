@@ -4,7 +4,7 @@
   "padding": null,
   "added_tokens": [
     {
-      "id": 36,
+      "id": 65,
       "special": true,
       "content": "<s>",
       "lstrip": false,
@@ -13,7 +13,7 @@
       "single_word": false
     },
     {
-      "id": 37,
+      "id": 66,
       "special": true,
       "content": "</s>",
       "lstrip": false,
@@ -22,7 +22,7 @@
       "single_word": false
     },
     {
-      "id": 38,
+      "id": 67,
       "special": true,
       "content": "<pad>",
       "lstrip": false,
@@ -31,7 +31,7 @@
       "single_word": false
     },
     {
-      "id": 39,
+      "id": 68,
       "special": true,
       "content": "<minute>",
       "lstrip": false,
@@ -40,7 +40,7 @@
       "single_word": false
     },
     {
-      "id": 40,
+      "id": 69,
       "special": true,
       "content": "</minute>",
       "lstrip": false,
@@ -49,7 +49,7 @@
       "single_word": false
     },
     {
-      "id": 41,
+      "id": 70,
       "special": true,
       "content": "<hour>",
       "lstrip": false,
@@ -58,7 +58,7 @@
       "single_word": false
     },
     {
-      "id": 42,
+      "id": 71,
       "special": true,
       "content": "</hour>",
       "lstrip": false,
@@ -67,7 +67,7 @@
       "single_word": false
     },
     {
-      "id": 43,
+      "id": 72,
       "special": true,
       "content": "<date>",
       "lstrip": false,
@@ -76,7 +76,7 @@
       "single_word": false
     },
     {
-      "id": 44,
+      "id": 73,
       "special": true,
       "content": "</date>",
       "lstrip": false,
@@ -85,7 +85,7 @@
       "single_word": false
     },
     {
-      "id": 45,
+      "id": 74,
       "special": true,
       "content": "<month>",
       "lstrip": false,
@@ -94,7 +94,7 @@
       "single_word": false
     },
     {
-      "id": 46,
+      "id": 75,
       "special": true,
       "content": "</month>",
       "lstrip": false,
@@ -103,7 +103,7 @@
       "single_word": false
     },
     {
-      "id": 47,
+      "id": 76,
       "special": true,
       "content": "<day_of_week>",
       "lstrip": false,
@@ -112,7 +112,7 @@
       "single_word": false
     },
     {
-      "id": 48,
+      "id": 77,
       "special": true,
       "content": "</day_of_week>",
       "lstrip": false,
@@ -172,12 +172,68 @@
       "29": 29,
       "30": 30,
       "31": 31,
-      "-": 32,
-      ",": 33,
-      "/": 34,
-      "*": 35
+      "32": 32,
+      "33": 33,
+      "34": 34,
+      "35": 35,
+      "36": 36,
+      "37": 37,
+      "38": 38,
+      "39": 39,
+      "40": 40,
+      "41": 41,
+      "42": 42,
+      "43": 43,
+      "44": 44,
+      "45": 45,
+      "46": 46,
+      "47": 47,
+      "48": 48,
+      "49": 49,
+      "50": 50,
+      "51": 51,
+      "52": 52,
+      "53": 53,
+      "54": 54,
+      "55": 55,
+      "56": 56,
+      "57": 57,
+      "58": 58,
+      "59": 59,
+      "-": 60,
+      ",": 61,
+      "/": 62,
+      "*": 64
     },
     "merges": [
+      "5 9",
+      "5 8",
+      "5 7",
+      "5 6",
+      "5 5",
+      "5 4",
+      "5 3",
+      "5 2",
+      "5 1",
+      "5 0",
+      "4 9",
+      "4 8",
+      "4 7",
+      "4 6",
+      "4 5",
+      "4 4",
+      "4 3",
+      "4 2",
+      "4 1",
+      "4 0",
+      "3 9",
+      "3 8",
+      "3 7",
+      "3 6",
+      "3 5",
+      "3 4",
+      "3 3",
+      "3 2",
       "3 1",
       "3 0",
       "2 9",

@@ -8,26 +8,26 @@ from openai import OpenAI
 from tqdm import tqdm
 
 
-def cron_component_sampler(length: int, weights: Optional[list] = None):
+def cron_component_sampler(start: int, end: int, weights: Optional[list] = None):
     def star():
         return "*"
 
     def random_singleton():
         return str(random.choices([
-            0,
-            random.randint(0, length - 1)
+            start,
+            random.randint(start + 1, end)
         ], weights=[0.67, 0.33])[0])
 
     def random_range():
-        start = random.randint(0, length - 1)
-        end = random.randint(start, length - 1)
-        return f"{start}-{end}"
+        rstart = random.randint(start, end - 1)
+        rend = random.randint(rstart, end)
+        return f"{rstart}-{rend}"
 
     def random_step():
-        return f"{random_singleton()}/{random.randint(1, length - 1)}"
+        return f"{random_singleton()}/{random.randint(1, end - 1)}"
 
     def random_list():
-        return ",".join([str(x) for x in random.choices(range(length), k=random.randint(1, 3))])
+        return ",".join([str(x) for x in random.choices(range(start, end + 1), k=random.randint(1, 3))])
 
     def _sampler():
         return random.choices([star, random_singleton, random_range, random_step, random_list],
@@ -43,11 +43,11 @@ def cron_component_sampler(length: int, weights: Optional[list] = None):
     return _sampler
 
 
-cron_minute_sampler = cron_component_sampler(60, weights=[0.2, 0.6, 0.1, 0.05, 0.05])  # Minutes are more likely to be 0
-cron_hour_sampler = cron_component_sampler(24)
-cron_date_samper = cron_component_sampler(31)
-cron_month_sampler = cron_component_sampler(12)
-cron_day_sampler = cron_component_sampler(7)
+cron_minute_sampler = cron_component_sampler(0, 59, weights=[0.2, 0.6, 0.1, 0.05, 0.05])  # Minutes are more likely to be 0
+cron_hour_sampler = cron_component_sampler(0, 23)
+cron_date_samper = cron_component_sampler(1, 31)
+cron_month_sampler = cron_component_sampler(0, 11)
+cron_day_sampler = cron_component_sampler(1, 7)
 
 
 def random_cron():
