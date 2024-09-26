@@ -145,12 +145,16 @@ if __name__ == "__main__":
     valid_loader = DataLoader(valid_dataset, batch_size=args.micro_batch_size, shuffle=False)
 
     if not args.from_checkpoint:
-        model = CronformerModel.from_distilbert().to(device)
+        model = CronformerModel.from_distilbert()
     else:
-        model = CronformerModel.from_pretrained(args.from_checkpoint).to(device)
+        model = CronformerModel.from_pretrained(args.from_checkpoint)
+    model.to(device)
 
     for param in model.parameters():
         param.requires_grad = False
+    for hidden_layer in model.encoder.transformer.layer[:-3]:
+        for param in hidden_layer.parameters():
+            param.requires_grad = True
     for param in model.decoder.parameters():
         param.requires_grad = True
 
