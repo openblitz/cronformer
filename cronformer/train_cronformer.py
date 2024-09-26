@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 import wandb
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer, DistilBertTokenizer
 
@@ -49,7 +50,7 @@ def eval_accuracy(logits, labels):
     return torch.sum(labels_view == predictions_view).item() / labels_view.numel()
 
 
-def eval_batch(model: CronformerModel, valid_loader: DataLoader, device: torch.device, num_steps: int, pad_token_id: int, output_dir: str, disable_wandb: bool):
+def eval_batch(model: CronformerModel, valid_loader: DataLoader, device: torch.device, num_steps: int, pad_token_id: int, output_dir: str, disable_wandb: bool, writer: Optional[SummaryWriter] = None):
     model.eval()
     valid_loss = 0
     valid_accuracy = 0
@@ -73,6 +74,9 @@ def eval_batch(model: CronformerModel, valid_loader: DataLoader, device: torch.d
     if not disable_wandb:
         wandb.log({"valid/loss": valid_loss}, step=num_steps)
         wandb.log({"valid/accuracy": valid_accuracy}, step=num_steps)
+    if writer:
+        writer.add_scalar("valid/loss", valid_loss, num_steps)
+        writer.add_scalar("valid/accuracy", valid_accuracy, num_steps)
     print(f"Validation Loss {valid_loss}")
     print(f"Validation Accuracy {valid_accuracy}")
 
@@ -98,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("--validation-split", type=float, default=0.1, help="Fraction of the dataset to use for validation")
     parser.add_argument("--validation-stride", type=int, default=1000, help="Number of steps between validation runs")
     parser.add_argument("--disable-wandb", action="store_true", help="Disable logging to wandb")
+    parser.add_argument("--tensorboard", action="store_true", help="Enable tensorboard logging")
     parser.add_argument("--from-checkpoint", type=str, default=None, help="Path to the checkpoint to start from")
     args = parser.parse_args()
 
@@ -112,6 +117,8 @@ if __name__ == "__main__":
                 "learning_rate": args.learning_rate,
             },
         )
+
+    writer = SummaryWriter() if args.tensorboard else None
 
     input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
     output_tokenizer = CronformerTokenizer()
@@ -164,6 +171,9 @@ if __name__ == "__main__":
             if not args.disable_wandb:
                 wandb.log({"epoch": epoch}, step=num_steps)
                 wandb.log({"learning_rate": optimizer.param_groups[0]["lr"]}, step=num_steps)
+            if args.tensorboard:
+                writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], num_steps)
+                writer.add_scalar("epoch", epoch, num_steps)
             if num_steps % args.validation_stride == 0:
                 eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb)
 
@@ -199,6 +209,9 @@ if __name__ == "__main__":
             if not args.disable_wandb:
                 wandb.log({"train/loss": batch_loss}, step=num_steps)
                 wandb.log({"train/accuracy": batch_accuracy}, step=num_steps)
+            if args.tensorboard:
+                writer.add_scalar("train/loss", batch_loss, num_steps)
+                writer.add_scalar("train/accuracy", batch_accuracy, num_steps)
             print(f"Epoch {epoch}, Step {num_steps}, Loss {batch_loss}, Accuracy {batch_accuracy}")
 
             num_steps += 1
@@ -207,6 +220,6 @@ if __name__ == "__main__":
                 print("WARNING: Maximum number of steps reached")
                 break
 
-    eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb)
+    eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb, writer)
     model.save_pretrained(path.join(output_dir, "final"))
 

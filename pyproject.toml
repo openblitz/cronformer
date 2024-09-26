@@ -14,6 +14,7 @@ tokenizers = "^0.19.1"
 wandb = "^0.17.5"
 tqdm = "^4.66.4"
 openai = "^1.36.1"
+tensorboard = "^2.18.0"
 
 [build-system]
 requires = ["poetry-core"]
