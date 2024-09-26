@@ -118,7 +118,7 @@ if __name__ == "__main__":
             },
         )
 
-    writer = SummaryWriter() if args.tensorboard else None
+    writer = SummaryWriter(flush_secs=5) if args.tensorboard else None
 
     input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
     output_tokenizer = CronformerTokenizer()
