@@ -8,7 +8,7 @@ import torch
 import wandb
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
-from transformers import PreTrainedTokenizer, BertTokenizer
+from transformers import PreTrainedTokenizer, DistilBertTokenizer
 
 from cronformer.modeling_cronformer import CronformerModel
 from cronformer.tokenization_cronformer import CronformerTokenizer
@@ -113,7 +113,7 @@ if __name__ == "__main__":
             },
         )
 
-    input_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
     output_tokenizer = CronformerTokenizer()
     pad_token_id = output_tokenizer.output_tokenizer.token_to_id("<pad>")
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     valid_loader = DataLoader(valid_dataset, batch_size=args.micro_batch_size, shuffle=False)
 
     if not args.from_checkpoint:
-        model = CronformerModel.from_bert().to(device)
+        model = CronformerModel.from_distilbert().to(device)
     else:
         model = CronformerModel.from_pretrained(args.from_checkpoint).to(device)
 

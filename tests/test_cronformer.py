@@ -7,7 +7,7 @@ import torch
 from cronformer.generation import generate
 from cronformer.modeling_cronformer import CronformerModel
 from cronformer.tokenization_cronformer import CronformerTokenizer
-from transformers import BertTokenizer
+from transformers import DistilBertTokenizer
 
 
 class TestCronformer(unittest.TestCase):
@@ -15,12 +15,12 @@ class TestCronformer(unittest.TestCase):
         with open(path.join(path.dirname(__file__), "test_cronformer.jsonl")) as eval_file:
             evals = map(json.loads, eval_file.readlines())
 
-        model = CronformerModel.from_pretrained(environ["CRONFORMER_MODEL_DIR"]) if environ.get("CRONFORMER_MODEL_DIR") else CronformerModel.from_bert()
+        model = CronformerModel.from_pretrained(environ["CRONFORMER_MODEL_DIR"]) if environ.get("CRONFORMER_MODEL_DIR") else CronformerModel.from_distilbert()
 
         if not environ.get("CRONFORMER_MODEL_DIR"):
             print("WARNING: CRONFORMER_MODEL_DIR not set, using untrained model")
 
-        input_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
         output_tokenizer = CronformerTokenizer()
         device = torch.device("cpu")
 
