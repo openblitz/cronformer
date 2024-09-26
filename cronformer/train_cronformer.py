@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], num_steps)
                 writer.add_scalar("epoch", epoch, num_steps)
             if num_steps % args.validation_stride == 0:
-                eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb)
+                eval_batch(model, valid_loader, device, num_steps, pad_token_id, output_dir, args.disable_wandb, writer)
 
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
