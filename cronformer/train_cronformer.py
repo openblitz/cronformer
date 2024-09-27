@@ -152,9 +152,9 @@ if __name__ == "__main__":
 
     for param in model.parameters():
         param.requires_grad = False
-    for hidden_layer in model.encoder.transformer.layer[:-3]:
-        for param in hidden_layer.parameters():
-            param.requires_grad = True
+    # for hidden_layer in model.encoder.transformer.layer[:-3]:
+    #     for param in hidden_layer.parameters():
+    #         param.requires_grad = True
     for param in model.decoder.parameters():
         param.requires_grad = True
 
