@@ -131,7 +131,7 @@ class CronDecoder(nn.Module):
     def __init__(self, config: DistilBertConfig):
         super(CronDecoder, self).__init__()
 
-        num_decoder_layers = 4
+        num_decoder_layers = 6
 
         self.config = config
         self.token_embedding = nn.Embedding(output_vocab_size, config.dim)
