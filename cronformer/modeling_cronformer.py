@@ -112,17 +112,13 @@ class DecoderLayer(nn.Module):
         self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, hidden_states, position_ids, encoder_outputs, attention_mask):
-        hidden_states = self.layer_norm1(hidden_states)
-        self_attn_output = self.self_attn(hidden_states, position_ids)
+        self_attn_output = self.self_attn(self.layer_norm1(hidden_states), position_ids)
         hidden_states = hidden_states + self.dropout(self_attn_output)
 
-        hidden_states = self.layer_norm2(hidden_states)
-
-        cross_attn_output, _ = self.cross_attn(hidden_states, encoder_outputs, encoder_outputs, attn_mask=attention_mask, needs_weights=False)
+        cross_attn_output, _ = self.cross_attn(self.layer_norm2(hidden_states), encoder_outputs, encoder_outputs, attn_mask=attention_mask, needs_weights=False)
         hidden_states = hidden_states + self.dropout(cross_attn_output)
 
-        hidden_states = self.layer_norm3(hidden_states)
-        feed_forward_output = self.feed_forward(hidden_states)
+        feed_forward_output = self.feed_forward(self.layer_norm3(hidden_states))
         hidden_states = hidden_states + self.dropout(feed_forward_output)
 
         return hidden_states
