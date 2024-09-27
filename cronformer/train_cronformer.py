@@ -36,7 +36,7 @@ class CronExpressionDataset(Dataset):
 
     def __getitem__(self, idx):
         input_text, output_cron = self.data[idx]
-        tokenized = self.input_tokenizer(input_text, max_length=self.input_sequence_length, padding="max_length", return_tensors="pt")[:, :self.input_sequence_length]
+        tokenized = self.input_tokenizer(input_text, max_length=self.input_sequence_length, padding="max_length", truncation=True, return_tensors="pt")
         input_ids = tokenized["input_ids"].squeeze(0)
         attention_mask = ~tokenized["attention_mask"].squeeze(0).bool()  # PyTorch convention is that True tokens are not attended to.
         output_ids = torch.tensor(self.output_tokenizer.tokenize(output_cron, sequence_length=self.sequence_length))
