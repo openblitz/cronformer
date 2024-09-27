@@ -160,6 +160,7 @@ if __name__ == "__main__":
 
     trainable_params = [param for param in model.parameters() if param.requires_grad]
     optimizer = torch.optim.AdamW(trainable_params, lr=args.learning_rate)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=len(train_loader), gamma=0.5)
 
     num_steps = 0
     num_grad_accumulation_steps = args.batch_size // args.micro_batch_size
@@ -209,6 +210,7 @@ if __name__ == "__main__":
             batch_accuracy /= num_actual_grad_accumulation_steps
 
             optimizer.step()
+            lr_scheduler.step()
 
             if not args.disable_wandb:
                 wandb.log({"train/loss": batch_loss}, step=num_steps)
