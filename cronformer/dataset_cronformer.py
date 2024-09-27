@@ -4,6 +4,7 @@ import random
 from os import environ
 from typing import Optional
 
+from cron_descriptor import get_description
 from openai import OpenAI
 from tqdm import tqdm
 
@@ -51,7 +52,7 @@ def cron_component_sampler(start: int, end: int, weights: Optional[list] = None)
 cron_minute_sampler = cron_component_sampler(0, 59, weights=[0.2, 0.6, 0.1, 0.05, 0.05])  # Minutes are more likely to be 0
 cron_hour_sampler = cron_component_sampler(0, 23)
 cron_date_samper = cron_component_sampler(1, 31)
-cron_month_sampler = cron_component_sampler(0, 11)
+cron_month_sampler = cron_component_sampler(1, 12)
 cron_day_sampler = cron_component_sampler(0, 6)
 
 
@@ -66,15 +67,7 @@ def random_cron():
 
 
 def format_cron(expr: str):
-    minute, hour, date, month, day = expr.split()
-
-    return f"""{expr}
-
-- Minute: {minute}
-- Hour: {hour}
-- Date: {date}
-- Month: {month}
-- Day: {day}"""
+    return f"""{expr} ({get_description(expr)})"""
 
 
 if __name__ == "__main__":
@@ -97,7 +90,7 @@ Generate a user prompt that would result in the given cron expression.
 Introduce a fictional scenario for a task that would run periodically under the provided schedule. The prompt must
 precisely be tailored to the cron schedule, making sure each non-default component of the schedule is explicitly mentioned.
 
-Your output should not have any formatting, without mentioning this meta-task.
+Your output should not have any formatting, without mentioning this meta-task. Do not include the answer verbatim in your output.
 Keep your response concise, and no more than 1 sentence.
 """
     k_shot_examples = [
@@ -165,7 +158,7 @@ Keep your response concise, and no more than 1 sentence.
                         for example in random.choices(k_shot_examples))
                         for item in pair
                     ],
-                    {"role": "user", "content": output}
+                    {"role": "user", "content": format_cron(output)}
                 ],
                 max_tokens=512,
                 temperature=0.9,
