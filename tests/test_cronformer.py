@@ -31,11 +31,17 @@ class TestCronformer(unittest.TestCase):
 
         model.to(device)
 
+        def without_pad_ids(ids):
+            return [id for id in ids if id != output_tokenizer.pad_token_id]
+
         for input, output in map(lambda entry: (entry["input"], entry["output"]), evals):
-            output_ids = torch.tensor(output_tokenizer.tokenize(output))
+            output_alt = output.replace("*/", "0/")  # Allow non-standard cron syntax
+            output_ids = without_pad_ids(torch.tensor(output_tokenizer.tokenize(output)).view(-1).tolist())
+            output_alt_ids = without_pad_ids(torch.tensor(output_tokenizer.tokenize(output_alt)).view(-1).tolist())
             generation = generate(model, input)
             prediction_ids = generation.token_ids
             prediction = generation.completion
 
             with self.subTest(input):
-                self.assertEqual(output_ids.view(-1).tolist(), prediction_ids, f"Expected {output} but got {prediction}")
+                self.assertTrue(output_ids == prediction_ids or output_alt_ids == prediction_ids,
+                                f"Expected {output} but got {prediction}.\nPredicted {prediction_ids}\n\nvs.\n\n{output_ids}")

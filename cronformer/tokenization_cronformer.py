@@ -21,6 +21,8 @@ class CronformerTokenizer:
         self.output_tokenizer = Tokenizer.from_file(vocab_file or path.join(path.dirname(__file__), 'tokenizer.json'))
         self.output_vocab_size = self.output_tokenizer.get_vocab_size()
 
+        self.pad_token_id = self.output_tokenizer.token_to_id("<pad>")
+
         super().__init__(**kwargs)
 
     @property
