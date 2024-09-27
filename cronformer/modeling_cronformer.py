@@ -166,6 +166,18 @@ class CronformerModel(PreTrainedModel):
         super(CronformerModel, self).__init__(config)
         self.encoder = DistilBertModel(config)
         self.decoder = CronDecoder(config)
+        self.config = config
+
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=std)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
 
     def forward(self, input_ids, output_ids, cron_dims=None, attention_mask=None):
         if cron_dims is None:
