@@ -103,7 +103,7 @@ class DecoderLayer(nn.Module):
         self.cross_attn = nn.MultiheadAttention(config.dim, config.num_attention_heads, batch_first=True)
         self.feed_forward = nn.Sequential(
             nn.Linear(config.dim, config.hidden_dim),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(config.hidden_dim, config.dim),
         )
         self.layer_norm1 = nn.LayerNorm(config.dim)
@@ -118,7 +118,7 @@ class DecoderLayer(nn.Module):
 
         hidden_states = self.layer_norm2(hidden_states)
 
-        cross_attn_output, _ = self.cross_attn(hidden_states, encoder_outputs, encoder_outputs, attn_mask=attention_mask)
+        cross_attn_output, _ = self.cross_attn(hidden_states, encoder_outputs, encoder_outputs, attn_mask=attention_mask, needs_weights=False)
         hidden_states = hidden_states + self.dropout(cross_attn_output)
 
         hidden_states = self.layer_norm3(hidden_states)
