@@ -52,7 +52,7 @@ cron_minute_sampler = cron_component_sampler(0, 59, weights=[0.2, 0.6, 0.1, 0.05
 cron_hour_sampler = cron_component_sampler(0, 23)
 cron_date_samper = cron_component_sampler(1, 31)
 cron_month_sampler = cron_component_sampler(0, 11)
-cron_day_sampler = cron_component_sampler(1, 7)
+cron_day_sampler = cron_component_sampler(0, 6)
 
 
 def random_cron():

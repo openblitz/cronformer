@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import torch
-from transformers import BertTokenizer
+from transformers import DistilBertTokenizer
 
 from cronformer.modeling_cronformer import CronformerModel
 from cronformer.tokenization_cronformer import CronformerTokenizer
@@ -14,7 +14,7 @@ class CronformerGeneration:
 
 
 def generate(model: CronformerModel, prompt: str, max_tokens=10):
-    input_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
     output_tokenizer = CronformerTokenizer()
 
     input_ids = torch.tensor(input_tokenizer.encode(prompt))[None].to(model.device)
