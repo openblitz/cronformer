@@ -19,6 +19,7 @@ cron-descriptor = "^1.4.5"
 onnx = "^1.16.2"
 onnxscript = "^0.1.0.dev20240927"
 onnxruntime = "^1.19.2"
+onnxconverter-common = "^1.14.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,11 +1,14 @@
 import argparse
+from pathlib import Path
+
 import onnx
 import onnxruntime
 import torch
 from os import environ
 
-from tensorboard.backend.event_processing.event_file_inspector import inspect
-from torch.onnx import ExportOptions
+from onnxconverter_common import float16
+from onnxruntime.quantization import matmul_4bits_quantizer, quant_utils
+
 from transformers import AutoTokenizer
 
 from .modeling_cronformer import CronformerModel
@@ -47,3 +50,7 @@ if __name__ == "__main__":
 
     onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer.onnx")
     onnxruntime_session.run(None, {"input_ids": example_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
+
+    model_fp16 = float16.convert_float_to_float16(onnx_model)
+    onnx.save(model_fp16, f"{model_dir}/cronformer_fp16.onnx")
+
