@@ -115,7 +115,7 @@ class DecoderLayer(nn.Module):
         self_attn_output = self.self_attn(self.layer_norm1(hidden_states), position_ids)
         hidden_states = hidden_states + self.dropout(self_attn_output)
 
-        cross_attn_output, _ = self.cross_attn(self.layer_norm2(hidden_states), encoder_outputs, encoder_outputs, attn_mask=attention_mask, needs_weights=False)
+        cross_attn_output, _ = self.cross_attn(self.layer_norm2(hidden_states), encoder_outputs, encoder_outputs, attn_mask=attention_mask, need_weights=False)
         hidden_states = hidden_states + self.dropout(cross_attn_output)
 
         feed_forward_output = self.feed_forward(self.layer_norm3(hidden_states))
