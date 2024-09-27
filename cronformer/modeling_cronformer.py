@@ -135,6 +135,8 @@ class CronDecoder(nn.Module):
 
         self.config = config
         self.token_embedding = nn.Embedding(output_vocab_size, config.dim)
+        with torch.no_grad():
+            self.token_embedding.weight *= config.initializer_range
         self.decoder_layers = nn.ModuleList([
             DecoderLayer(config)
             for _ in range(num_decoder_layers)
@@ -168,22 +170,12 @@ class CronformerModel(PreTrainedModel):
         self.decoder = CronDecoder(config)
         self.config = config
 
-    def _init_weights(self, module):
-        std = self.config.initializer_range
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
     def forward(self, input_ids, output_ids, cron_dims=None, attention_mask=None):
         if cron_dims is None:
             cron_dims = list(range(CRON_DIMS))
 
-        encoder_outputs = self.encoder(input_ids, attention_mask).last_hidden_state
+        # Note: Huggingface & PyTorch have opposite conventions for the attention mask.
+        encoder_outputs = self.encoder(input_ids, ~attention_mask).last_hidden_state
         output_position_ids = torch.arange(0, output_ids.size(2), dtype=torch.long, device=output_ids.device).expand((output_ids.shape[1:])).contiguous()
         logits = torch.stack(
             [self.decoder(output_ids[i], encoder_outputs, output_position_ids, i, attention_mask) for i in cron_dims],
