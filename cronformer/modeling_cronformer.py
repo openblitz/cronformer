@@ -140,6 +140,7 @@ class CronDecoder(nn.Module):
             for _ in range(num_decoder_layers)
         ])
         self.cron_head = nn.Linear(config.dim, output_vocab_size)
+        self.norm = nn.LayerNorm(config.dim)
 
     def forward(self, output_ids, encoder_outputs, output_position_ids, cron_dim, attention_mask):
         embeddings = self.token_embedding(output_ids)
@@ -153,6 +154,7 @@ class CronDecoder(nn.Module):
         hidden_states = embeddings
         for decoder_layer in self.decoder_layers:
             hidden_states = decoder_layer(hidden_states, output_position_ids, encoder_outputs, attention_mask=attention_mask)
+        hidden_states = self.norm(hidden_states)
 
         return self.cron_head(hidden_states)
 
