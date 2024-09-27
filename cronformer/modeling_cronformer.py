@@ -1,4 +1,4 @@
-from os import path
+from os import path, environ
 from typing import Optional
 
 import torch.nn.functional as F
@@ -86,7 +86,11 @@ class CronSelfAttention(nn.Module):
         cos, sin = self.rotary_embed(query, position_ids)
         query_rot, key_rot = apply_rotary_pos_emb(query, key, cos, sin)
 
-        with torch.backends.cuda.sdp_kernel(enable_math=False):
+        context = (torch.backends.cuda.sdp_kernel(enable_math=False)
+                   if not environ.get("ONNX_EXPORT_MODE", None)
+                   else nullcontext())
+
+        with context:
             attn_output = F.scaled_dot_product_attention(query_rot, key_rot, value, dropout_p=self.attention_dropout, is_causal=True)
 
         # Concatenate attention heads and project back to original dimension
