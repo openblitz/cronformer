@@ -136,7 +136,7 @@ class CronDecoder(nn.Module):
     def __init__(self, config: DistilBertConfig):
         super(CronDecoder, self).__init__()
 
-        num_decoder_layers = 6
+        num_decoder_layers = 4
 
         self.config = config
         self.token_embedding = nn.Embedding(output_vocab_size, config.dim)
@@ -149,7 +149,7 @@ class CronDecoder(nn.Module):
         self.cron_head = nn.Linear(config.dim, output_vocab_size)
         self.norm = nn.LayerNorm(config.dim)
 
-    def forward(self, output_ids, encoder_outputs, output_position_ids, cron_dim, attention_mask):
+    def forward(self, output_ids, encoder_outputs, output_position_ids, attention_mask):
         embeddings = self.token_embedding(output_ids)
 
         if attention_mask is not None and len(attention_mask.shape) == 2:
@@ -179,15 +179,18 @@ class CronformerModel(PreTrainedModel):
         if cron_dims is None:
             cron_dims = list(range(CRON_DIMS))
 
+        output_ids = output_ids[cron_dims]
+
         # Note: Huggingface & PyTorch have opposite conventions for the attention mask.
         encoder_outputs = self.encoder(input_ids, ~attention_mask if attention_mask is not None else None).last_hidden_state
         output_position_ids = torch.arange(0, output_ids.size(2), dtype=torch.long, device=output_ids.device).expand((output_ids.shape[1:])).contiguous()
-        logits = torch.stack(
-            [self.decoder(output_ids[i], encoder_outputs, output_position_ids, i, attention_mask) for i in cron_dims],
-            dim=0,
-        )
 
-        return logits
+        return self.decoder(
+            output_ids.view(-1, output_ids.size(-1)),
+            encoder_outputs.repeat_interleave(output_ids.size(0), dim=0).contiguous(),
+            output_position_ids.repeat_interleave(output_ids.size(0), dim=0).contiguous(),
+            attention_mask.repeat_interleave(output_ids.size(0), dim=0).contiguous() if attention_mask is not None else None,
+        ).reshape(output_ids.shape[0], output_ids.shape[1], output_ids.shape[2], -1)
 
     @classmethod
     def from_distilbert(cls, config: Optional[DistilBertConfig] = None, torch_dtype: Optional[torch.dtype] = None):
