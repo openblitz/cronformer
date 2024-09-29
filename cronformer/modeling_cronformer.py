@@ -9,14 +9,11 @@ from tokenizers import Tokenizer
 from transformers import PreTrainedModel, DistilBertConfig, DistilBertModel
 from torch import nn
 
-config = DistilBertConfig.from_pretrained('distilbert/distilbert-base-uncased')
-encoder = DistilBertModel.from_pretrained('distilbert/distilbert-base-uncased', config=config)
-output_tokenizer = Tokenizer.from_file(path.join(path.dirname(__file__), 'tokenizer.json'))
-output_vocab_size = output_tokenizer.get_vocab_size()
+from cronformer.configuration_cronformer import CronformerConfig
 
 
 # Copied from modeling_llama.py
-class CronRotaryEmbedding(nn.Module):
+class CronformerRotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None, scaling_factor=1.0):
         super().__init__()
         self.scaling_factor = scaling_factor
@@ -59,19 +56,19 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class CronSelfAttention(nn.Module):
-    def __init__(self, config: DistilBertConfig):
-        super(CronSelfAttention, self).__init__()
+class CronformerSelfAttention(nn.Module):
+    def __init__(self, config: CronformerConfig):
+        super(CronformerSelfAttention, self).__init__()
         self.num_attention_heads = config.num_attention_heads
-        self.head_dim = config.dim // config.num_attention_heads
+        self.head_dim = config.hidden_size // config.num_attention_heads
         self.attention_dropout = config.attention_dropout
 
-        self.query = nn.Linear(config.dim, config.dim)
-        self.key = nn.Linear(config.dim, config.dim)
-        self.value = nn.Linear(config.dim, config.dim)
-        self.out_proj = nn.Linear(config.dim, config.dim)
+        self.query = nn.Linear(config.hidden_size, config.hidden_size)
+        self.key = nn.Linear(config.hidden_size, config.hidden_size)
+        self.value = nn.Linear(config.hidden_size, config.hidden_size)
+        self.out_proj = nn.Linear(config.hidden_size, config.hidden_size)
 
-        self.rotary_embed = CronRotaryEmbedding(self.head_dim)
+        self.rotary_embed = CronformerRotaryEmbedding(self.head_dim)
 
     def forward(self, hidden_states, position_ids):
         batch_size, seq_len, embed_dim = hidden_states.size()
@@ -101,20 +98,20 @@ class CronSelfAttention(nn.Module):
         return attn_output
 
 
-class DecoderLayer(nn.Module):
-    def __init__(self, config: DistilBertConfig):
-        super(DecoderLayer, self).__init__()
-        self.self_attn = CronSelfAttention(config)
-        self.cross_attn = nn.MultiheadAttention(config.dim, config.num_attention_heads, batch_first=True)
+class CronformerDecoderLayer(nn.Module):
+    def __init__(self, config: CronformerConfig):
+        super(CronformerDecoderLayer, self).__init__()
+        self.self_attn = CronformerSelfAttention(config)
+        self.cross_attn = nn.MultiheadAttention(config.hidden_size, config.num_attention_heads, batch_first=True)
         self.feed_forward = nn.Sequential(
-            nn.Linear(config.dim, config.hidden_dim),
+            nn.Linear(config.hidden_size, config.intermediate_size),
             nn.GELU(),
-            nn.Linear(config.hidden_dim, config.dim),
+            nn.Linear(config.intermediate_size, config.hidden_size),
         )
-        self.layer_norm1 = nn.LayerNorm(config.dim)
-        self.layer_norm2 = nn.LayerNorm(config.dim)
-        self.layer_norm3 = nn.LayerNorm(config.dim)
-        self.dropout = nn.Dropout(config.dropout)
+        self.layer_norm1 = nn.LayerNorm(config.hidden_size)
+        self.layer_norm2 = nn.LayerNorm(config.hidden_size)
+        self.layer_norm3 = nn.LayerNorm(config.hidden_size)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states, position_ids, encoder_outputs, attention_mask):
         self_attn_output = self.self_attn(self.layer_norm1(hidden_states), position_ids)
@@ -132,22 +129,22 @@ class DecoderLayer(nn.Module):
 CRON_DIMS = 5  # minute, hour, day, month, day_of_week
 
 
-class CronDecoder(nn.Module):
-    def __init__(self, config: DistilBertConfig):
-        super(CronDecoder, self).__init__()
+class CronformerDecoder(nn.Module):
+    def __init__(self, config: CronformerConfig):
+        super(CronformerDecoder, self).__init__()
 
         num_decoder_layers = 4
 
         self.config = config
-        self.token_embedding = nn.Embedding(output_vocab_size, config.dim)
+        self.token_embedding = nn.Embedding(config.cron_vocab_size, config.hidden_size)
         with torch.no_grad():
             self.token_embedding.weight *= config.initializer_range
         self.decoder_layers = nn.ModuleList([
-            DecoderLayer(config)
+            CronformerDecoderLayer(config)
             for _ in range(num_decoder_layers)
         ])
-        self.cron_head = nn.Linear(config.dim, output_vocab_size)
-        self.norm = nn.LayerNorm(config.dim)
+        self.cron_head = nn.Linear(config.hidden_size, config.cron_vocab_size)
+        self.norm = nn.LayerNorm(config.hidden_size)
 
     def forward(self, output_ids, encoder_outputs, output_position_ids, attention_mask):
         embeddings = self.token_embedding(output_ids)
@@ -167,13 +164,26 @@ class CronDecoder(nn.Module):
 
 
 class CronformerModel(PreTrainedModel):
-    config_class = DistilBertConfig
+    config_class = CronformerConfig
 
-    def __init__(self, config: DistilBertConfig):
+    def __init__(self, config: CronformerConfig):
         super(CronformerModel, self).__init__(config)
-        self.encoder = DistilBertModel(config)
-        self.decoder = CronDecoder(config)
+        self.encoder = DistilBertModel(config.to_distilbert())
+        self.decoder = CronformerDecoder(config)
         self.config = config
+
+    def _init_weights(self, module: nn.Module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
 
     def forward(self, input_ids, output_ids, cron_dims=None, attention_mask=None):
         if cron_dims is None:
@@ -193,11 +203,10 @@ class CronformerModel(PreTrainedModel):
         ).reshape(output_ids.shape[0], output_ids.shape[1], output_ids.shape[2], -1)
 
     @classmethod
-    def from_distilbert(cls, config: Optional[DistilBertConfig] = None, torch_dtype: Optional[torch.dtype] = None):
-        if config is None:
-            config = DistilBertConfig.from_pretrained('distilbert/distilbert-base-uncased')
-
+    def from_distilbert(cls, config: Optional[CronformerConfig]=None):
         cronformer = cls(config)
-        cronformer.encoder = DistilBertModel.from_pretrained('distilbert/distilbert-base-uncased', config=config, torch_dtype=torch_dtype)
+
+        distilbert_config = config.to_distilbert()
+        cronformer.encoder = DistilBertModel.from_pretrained('distilbert/distilbert-base-uncased', config=distilbert_config)
 
         return cronformer

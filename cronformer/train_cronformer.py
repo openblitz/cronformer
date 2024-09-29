@@ -9,8 +9,9 @@ import wandb
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from transformers import PreTrainedTokenizer, DistilBertTokenizer
+from transformers import PreTrainedTokenizer, DistilBertTokenizer, AutoTokenizer
 
+from cronformer.configuration_cronformer import CronformerConfig
 from cronformer.modeling_cronformer import CronformerModel
 from cronformer.tokenization_cronformer import CronformerTokenizer
 
@@ -120,9 +121,13 @@ if __name__ == "__main__":
 
     writer = SummaryWriter(flush_secs=30) if args.tensorboard else None
 
-    input_tokenizer = DistilBertTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
+    config = CronformerConfig() if not args.from_checkpoint else CronformerConfig.from_pretrained(args.from_checkpoint)
+    input_tokenizer = AutoTokenizer.from_pretrained(config.lang_tokenizer)
     output_tokenizer = CronformerTokenizer()
     pad_token_id = output_tokenizer.output_tokenizer.token_to_id("<pad>")
+
+    assert config.lang_vocab_size == input_tokenizer.vocab_size
+    assert config.cron_vocab_size == output_tokenizer.vocab_size
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -145,16 +150,13 @@ if __name__ == "__main__":
     valid_loader = DataLoader(valid_dataset, batch_size=args.micro_batch_size, shuffle=False)
 
     if not args.from_checkpoint:
-        model = CronformerModel.from_distilbert()
+        model = CronformerModel.from_distilbert(config)
     else:
         model = CronformerModel.from_pretrained(args.from_checkpoint)
     model.to(device)
 
     for param in model.parameters():
         param.requires_grad = False
-    # for hidden_layer in model.encoder.transformer.layer[:-3]:
-    #     for param in hidden_layer.parameters():
-    #         param.requires_grad = True
     for param in model.decoder.parameters():
         param.requires_grad = True
 
