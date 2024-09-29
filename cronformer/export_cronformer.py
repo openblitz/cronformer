@@ -1,6 +1,5 @@
 import argparse
 from datetime import datetime
-from pathlib import Path
 
 import onnx
 import onnxruntime
@@ -8,7 +7,6 @@ import torch
 from os import environ
 
 from onnxconverter_common import float16
-from onnxruntime.quantization import matmul_4bits_quantizer, quant_utils
 
 from transformers import AutoTokenizer
 
@@ -39,8 +37,8 @@ if __name__ == "__main__":
         input_names=["input_ids", "output_ids"],
         output_names=["logits"],
         dynamic_axes={
-            "input_ids": {0: "batch_size", 1: "sequence_length"},
-            "output_ids": {1: "batch_size", 2: "sequence_length"},
+            "input_ids": {0: "batch_size", 1: "input_sequence_length"},
+            "output_ids": {1: "batch_size", 2: "output_sequence_length"},
             "logits": {1: "batch_size", 2: "sequence_length"},
         },
         export_params=True,
