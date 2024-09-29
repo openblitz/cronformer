@@ -39,7 +39,7 @@ if __name__ == "__main__":
         dynamic_axes={
             "input_ids": {0: "batch_size", 1: "input_sequence_length"},
             "output_ids": {1: "batch_size", 2: "output_sequence_length"},
-            "logits": {1: "batch_size", 2: "sequence_length"},
+            "logits": {1: "batch_size", 2: "output_sequence_length"},
         },
         export_params=True,
         opset_version=17,
@@ -47,16 +47,18 @@ if __name__ == "__main__":
     onnx_model = onnx.load(f"{model_dir}/cronformer.onnx")
     onnx.checker.check_model(onnx_model, full_check=True)
 
+    example_dynamic_input_ids = torch.tensor([[input_tokenizer.cls_token_id, input_tokenizer.sep_token_id]])
+
     onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer.onnx", providers=["CPUExecutionProvider"])
     start_time = datetime.now()
-    onnxruntime_session.run(None, {"input_ids": example_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
+    onnxruntime_session.run(None, {"input_ids": example_dynamic_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
     end_time = datetime.now()
     print(f"Ran fp32 onnx model in {(end_time - start_time).total_seconds()}s")
 
     model_fp16 = float16.convert_float_to_float16(onnx_model)
     onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer_fp16.onnx", providers=["CPUExecutionProvider"])
     start_time = datetime.now()
-    onnxruntime_session.run(None, {"input_ids": example_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
+    onnxruntime_session.run(None, {"input_ids": example_dynamic_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
     end_time = datetime.now()
     print(f"Ran fp16 onnx model in {(end_time - start_time).total_seconds()}s")
 

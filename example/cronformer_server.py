@@ -58,33 +58,50 @@ class Model:
         with fs.open("openblitz/cronformer/tokenizer.json", "r") as f:
             self.output_tokenizer = Tokenizer.from_str(f.read())
 
-    def inference(self, prompt: str):
+    def inference(self, prompt: str) -> str:
         input_ids = np.array([self.input_tokenizer.encode(prompt).ids])
         output_ids = np.array([
             [[self.output_tokenizer.token_to_id(open_token)]]
             for open_token, _ in CRON_TOKENS
         ])
+        output_mask = [1] * len(output_ids)
+        stop_ids = [self.output_tokenizer.token_to_id(close_token) for _, close_token in CRON_TOKENS]
+        pad_token_id = self.output_tokenizer.token_to_id("<pad>")
 
-        logits = np.array(self.session.run(["logits"], {
-            "input_ids": input_ids,
-            "output_ids": output_ids,
-        }))
+        while sum(output_mask) > 0 and output_ids.shape[2] < 12:
+            logits = np.array(self.session.run(["logits"], {
+                "input_ids": input_ids,
+                "output_ids": output_ids,
+            }))
+            logits = logits[:, :5, :, -1, :].reshape(-1, logits.shape[-1])
+            predicted_ids = np.argmax(logits, axis=-1)
 
-        logits = logits[:, :, -1, :].reshape(-1, logits.shape[-1])
-        tokens = logits.argmax(axis=1)
+            new_column = np.array([[[pad_token_id]]] * len(output_ids))
+            output_ids = np.concatenate((output_ids, new_column), axis=2)
 
-        value = []
-        for t in tokens:
-            value.append(self.output_tokenizer.id_to_token(t))
+            for i, prediction_component_id in enumerate(predicted_ids):
+                next_token_id = prediction_component_id
 
-        return value
+                if output_mask[i] == 1:
+                    output_ids[i][0][-1] = next_token_id
+
+                if next_token_id in stop_ids:
+                    output_mask[i] = 0
+
+        return " ".join([
+            self.output_tokenizer.decode([
+                token_id
+                for token_id in token_ids
+                if token_id != pad_token_id
+            ], skip_special_tokens=True) for token_ids in output_ids.squeeze().tolist()
+        ])
 
     @modal.web_endpoint(docs=True, label="cronformer", method="POST")
     def web_inference(self, body: dict):
         prompt = body["prompt"]
 
         return Response(
-            content=json.dumps(self.inference(prompt)),
+            content=json.dumps({"cron": self.inference(prompt)}),
             media_type="application/json",
         )
 
