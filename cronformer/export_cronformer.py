@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 from pathlib import Path
 
 import onnx
@@ -48,9 +49,18 @@ if __name__ == "__main__":
     onnx_model = onnx.load(f"{model_dir}/cronformer.onnx")
     onnx.checker.check_model(onnx_model, full_check=True)
 
-    onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer.onnx")
+    onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer.onnx", providers=["CPUExecutionProvider"])
+    start_time = datetime.now()
     onnxruntime_session.run(None, {"input_ids": example_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
+    end_time = datetime.now()
+    print(f"Ran fp32 onnx model in {(end_time - start_time).total_seconds()}s")
 
     model_fp16 = float16.convert_float_to_float16(onnx_model)
+    onnxruntime_session = onnxruntime.InferenceSession(f"{model_dir}/cronformer_fp16.onnx", providers=["CPUExecutionProvider"])
+    start_time = datetime.now()
+    onnxruntime_session.run(None, {"input_ids": example_input_ids.tolist(), "output_ids": example_output_ids.tolist()})
+    end_time = datetime.now()
+    print(f"Ran fp16 onnx model in {(end_time - start_time).total_seconds()}s")
+
     onnx.save(model_fp16, f"{model_dir}/cronformer_fp16.onnx")
 
